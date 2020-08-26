@@ -12,7 +12,7 @@ interface IMetaWalletProps {
 interface IMetaWalletState {
   account: string;
   accountError: boolean;
-  balance: string;
+  totalSupply: string;
   contractAddress: string;
 }
 
@@ -22,7 +22,7 @@ export default class MetaWallet extends React.Component<IMetaWalletProps, IMetaW
     this.state = {
       account: "",
       accountError: false,
-      balance: "",
+      totalSupply: "",
       contractAddress: "",
     };
   }
@@ -41,6 +41,7 @@ export default class MetaWallet extends React.Component<IMetaWalletProps, IMetaW
     try {
       // instance = await MainTokenContract.deployed();
       instance = await MainTokenContract.at("0x2f1F4609180ceDb2cEB63c80cE6eCF94F4C0c394");
+      console.log('instance: ', instance)
     } catch (err) {
       alert(err);
       return;
@@ -48,12 +49,20 @@ export default class MetaWallet extends React.Component<IMetaWalletProps, IMetaW
     const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
     const account = accounts[0];
     // const balance  = await instance.getBalance(this.props.web3.eth.accounts[0]);
+    let totalSupply;
+    try {
+      totalSupply = await instance.name();
+      console.log('totalSupply: ', totalSupply)
+    } catch (error) {
+      console.log('error when get totalSupply: ', error)
+    }
     this.setState({
       // account: this.props.web3.eth.accounts[0],
       account,
       accountError: false,
       // balance: balance.toString(),
       contractAddress: instance.address,
+      totalSupply,
     });
   }
 
@@ -63,7 +72,7 @@ export default class MetaWallet extends React.Component<IMetaWalletProps, IMetaW
       <h3>MainToken</h3>
       <p>Contract address: {this.state.contractAddress}</p>
       <p>Account: {this.state.accountError ? "No accounts found" : this.state.account}</p>
-      {/* <p>Balance: {this.state.balance}</p> */}
+      <p>totalSupply: {this.state.totalSupply}</p>
     </div>
     );
   }

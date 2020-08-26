@@ -2,8 +2,8 @@ import * as React from "react";
 import * as TruffleContract from "truffle-contract";
 import * as Web3 from "web3";
 
-const MetaCoinContract = TruffleContract(require("../../build/contracts/MetaCoin.json"));
-import IMetaCoin from "../contract-interfaces/IMetaCoin";
+const MainTokenContract = TruffleContract(require("../../build/contracts/MainToken.json"));
+// import IMainToken from "../contract-interfaces/IMainToken";
 
 interface IMetaWalletProps {
   web3: Web3;
@@ -35,10 +35,11 @@ export default class MetaWallet extends React.Component<IMetaWalletProps, IMetaW
       });
       return;
     }
-    MetaCoinContract.setProvider(this.props.web3.currentProvider);
-    let instance: IMetaCoin;
+    MainTokenContract.setProvider(this.props.web3.currentProvider);
+    // let instance: IMainToken;
+    let instance;
     try {
-      instance = await MetaCoinContract.deployed();
+      instance = await MainTokenContract.deployed();
     } catch (err) {
       alert(err);
       return;
@@ -56,7 +57,7 @@ export default class MetaWallet extends React.Component<IMetaWalletProps, IMetaW
   public render() {
     return (
     <div>
-      <h3>MetaCoin</h3>
+      <h3>MainToken</h3>
       <p>Contract address: {this.state.contractAddress}</p>
       <p>Account: {this.state.accountError ? "No accounts found" : this.state.account}</p>
       <p>Balance: {this.state.balance}</p>

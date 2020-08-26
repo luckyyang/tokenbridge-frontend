@@ -39,17 +39,20 @@ export default class MetaWallet extends React.Component<IMetaWalletProps, IMetaW
     // let instance: IMainToken;
     let instance;
     try {
-      instance = await MainTokenContract.deployed();
+      // instance = await MainTokenContract.deployed();
+      instance = await MainTokenContract.at("0x2f1F4609180ceDb2cEB63c80cE6eCF94F4C0c394");
     } catch (err) {
       alert(err);
       return;
     }
-
-    const balance  = await instance.getBalance(this.props.web3.eth.accounts[0]);
+    const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
+    // const balance  = await instance.getBalance(this.props.web3.eth.accounts[0]);
     this.setState({
-      account: this.props.web3.eth.accounts[0],
+      // account: this.props.web3.eth.accounts[0],
+      account,
       accountError: false,
-      balance: balance.toString(),
+      // balance: balance.toString(),
       contractAddress: instance.address,
     });
   }
@@ -60,7 +63,7 @@ export default class MetaWallet extends React.Component<IMetaWalletProps, IMetaW
       <h3>MainToken</h3>
       <p>Contract address: {this.state.contractAddress}</p>
       <p>Account: {this.state.accountError ? "No accounts found" : this.state.account}</p>
-      <p>Balance: {this.state.balance}</p>
+      {/* <p>Balance: {this.state.balance}</p> */}
     </div>
     );
   }

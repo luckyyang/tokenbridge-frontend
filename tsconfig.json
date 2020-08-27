@@ -10,6 +10,7 @@
       "es2015",
       "scripthost"
     ],
+    "noImplicitAny": false,
     "sourceMap": true,
     "alwaysStrict": true,
     "noEmitOnError": true,

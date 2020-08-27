@@ -60,7 +60,7 @@ export default class MetaWallet extends React.Component<
     let tokenContract;
     let bridgeContract;
     try {
-      tokenContract = await MainTokenContract.at(DAI_TOKEN[42].address);
+      tokenContract = await MainTokenContract.at(ContractsInfo[42].testToken);
       bridgeContract = await BridgeContract.at(ContractsInfo[42].bridge);
 
       console.log("tokenContract: ", tokenContract);
@@ -73,7 +73,7 @@ export default class MetaWallet extends React.Component<
     // const balance  = await tokenContract.getBalance(web3.eth.accounts[0]);
     let balance;
     try {
-      balance = await tokenContract.getBalance(account);
+      balance = await tokenContract.balanceOf(account);
       console.log("balance: ", balance);
     } catch (error) {
       console.log("error when get balance: ", error);

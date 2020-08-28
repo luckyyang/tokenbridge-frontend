@@ -6,7 +6,7 @@ import Web3 = require('web3');
 // import BigNumber from "bignumber.js"
 const BigNumber = require('bignumber.js');
 import { ContractsInfo, DAI_TOKEN } from '../util/constants';
-import retry3Times from '../util/retry';
+// import retry3Times from '../util/retry';
 
 const config = {
   networkId: 42,
@@ -137,14 +137,16 @@ export default class MetaWallet extends React.Component<
     const amountBN = totalCost;
 
     let gasPrice = "";
-    //let currentStep = 'validate-balance';
+    // let currentStep = 'validate-balance';
     return tokenContract.balanceOf(address)
     .then(async (balance) => {
       const balanceBN = new BigNumber(balance);
       if (balanceBN.isLessThan(amountBN)) {
-        throw new Error(`Insuficient Balance in your account, your current balance is ${balanceBN.shift(-decimals)} ${tokenContract.symbol}`);
+        throw new Error(`Insuficient Balance in your account,
+        your current balance is ${balanceBN.shift(-decimals)} ${tokenContract.symbol}`);
       }
-      const maxWithdrawInWei = await retry3Times(bridgeContract.calcMaxWithdraw().call);
+      const maxWithdrawInWei = await bridgeContract.calcMaxWithdraw();
+      console.log("maxWithdrawInWei: ", maxWithdrawInWei);
       const maxWithdraw = new BigNumber(web3.fromWei(maxWithdrawInWei, "ether"));
       if (amount.isGreaterThan(maxWithdraw)) {
         throw new Error(`Amount bigger than the daily limit. Daily limit left ${maxWithdraw} tokens`);
@@ -153,12 +155,12 @@ export default class MetaWallet extends React.Component<
       let gasPriceParsed = 0;
       if (config.networkId >= 30 && config.networkId <= 33) {
         const block: any = await web3.eth.getBlock("latest");
-        gasPriceParsed = parseInt(block.minimumGasPrice);
+        gasPriceParsed = parseInt(block.minimumGasPrice, 10);
         gasPriceParsed = gasPriceParsed <= 1 ? 1 : gasPriceParsed * 1.03;
       } else {
         const callback = (err, gasPriceAvg) => {
           if (!err) {
-            gasPriceParsed = parseInt(gasPriceAvg);
+            gasPriceParsed = parseInt(gasPriceAvg, 10);
             gasPriceParsed = gasPriceParsed <= 1 ? 1 : gasPriceParsed * 1.3;
           }
         }
@@ -168,7 +170,8 @@ export default class MetaWallet extends React.Component<
     }).then(async () => {
       // currentStep = 'approve-transfer';
       return new Promise((resolve, reject) => {
-        tokenContract.approve(bridgeContract.address, amountBN.toString()).send({from: address, gasPrice, gas: 70000}, async (err, txHash) => {
+        tokenContract.approve(bridgeContract.address, amountBN.toString())
+        .send({from: address, gasPrice, gas: 70000}, async (err, txHash) => {
           if (err) { return reject(err); }
           try {
             const receipt: any = await this.waitForReceipt(txHash);
@@ -184,7 +187,8 @@ export default class MetaWallet extends React.Component<
     }).then(async () => {
       // currentStep = 'transfer-tokens';
       return new Promise((resolve, reject) => {
-        bridgeContract.receiveTokens(tokenContract.address, amountBN.toString()).send({from: address, gasPrice, gas: 200000}, async (err, txHash) => {
+        bridgeContract.receiveTokens(tokenContract.address, amountBN.toString())
+        .send({from: address, gasPrice, gas: 200000}, async (err, txHash) => {
           if (err) { return reject(err); }
           try {
             const receipt: any = await this.waitForReceipt(txHash);
@@ -201,13 +205,13 @@ export default class MetaWallet extends React.Component<
       // currentStep = 'wait-confirmations';
       console.log("receipt: ", receipt);
     }).catch((err) => {
-      //iconFail(currentStep);
+      // iconFail(currentStep);
       console.error(err);
       crossTokenError(`Couln't cross the tokens. ${err.message}`);
     });
   }
 
-  async waitForReceipt(txHash) {
+  public async waitForReceipt(txHash) {
     const { web3 } = this.props;
     let timeElapsed = 0;
     const interval = 10000;
@@ -220,7 +224,8 @@ export default class MetaWallet extends React.Component<
                 resolve(receipt);
             }
             if(timeElapsed > 90000) {
-                reject(new Error(`Operation took too long <a target="_blank" href="${config.explorer}/tx/${txHash}">check Tx on the explorer</a>`));
+                reject(new Error(`Operation took too long
+                <a target="_blank" href="${config.explorer}/tx/${txHash}">check Tx on the explorer</a>`));
             }
         }, interval);
     });
@@ -228,12 +233,11 @@ export default class MetaWallet extends React.Component<
 
   public onDaiChange = (event) => {
     const dai = parseInt(event.target.value, 10);
-    console.log('dai: ', dai, typeof dai);
+    console.log("dai: ", dai, typeof dai);
     this.setState({ dai });
     const withdraw = new BigNumber(dai);
     console.log("withdraw: ", withdraw.toString());
   }
-
 
   public render() {
     return (

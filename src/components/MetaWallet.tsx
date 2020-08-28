@@ -167,37 +167,35 @@ export default class MetaWallet extends React.Component<
     }
     gasPrice = `0x${Math.ceil(gasPriceParsed).toString(16)}`;
 
-    // currentStep = 'approve-transfer';
-    await tokenContract.approve(bridgeContract.address, amountBN.toString());
-    tokenContract.send({from: address, gasPrice, gas: 70000}, async (err, txHash) => {
-      if (err) { return console.error(err); }
-      try {
-        const receipt: any = await this.waitForReceipt(txHash);
-        if (receipt.status) {
-          console.log("receipt: ", receipt);
-        }
-      } catch (err) {
-        console.error(err);
+    try {
+      // currentStep = 'approve-transfer';
+      const { logs, receipt, tx } = await tokenContract.approve(
+        bridgeContract.address, amountBN.toString(), { from: address, gasPrice, gas: 70000 }
+      );
+      console.log("approve txHash: ", tx);
+      console.log("approve logs: ", logs);
+      // const txHash = await tokenContract.send({from: address, gasPrice, gas: 70000});
+      if (receipt.status) {
+        console.log("approve receipt: ", receipt);
       }
-      console.error(new Error(`Execution failed <a target="_blank" href="${config.explorer}/tx/${txHash}">see Tx</a>`));
-    });
+    } catch (error) {
+      console.error(error);
+    }
 
-    // currentStep = 'transfer-tokens';
-    return new Promise((resolve, reject) => {
-      bridgeContract.receiveTokens(tokenContract.address, amountBN.toString())
-      .send({from: address, gasPrice, gas: 200000}, async (err, txHash) => {
-        if (err) { return reject(err); }
-        try {
-          const receipt: any = await this.waitForReceipt(txHash);
-          if (receipt.status) {
-            resolve(receipt);
-          }
-        } catch (err) {
-          reject(err);
-        }
-        reject(new Error(`Execution failed <a target="_blank" href="${config.explorer}/tx/${txHash}">see Tx</a>`));
-      });
-    });
+    try {
+      // currentStep = "transfer-tokens";
+      const { logs, receipt, tx } = await bridgeContract.receiveTokens(
+        tokenContract.address, amountBN.toString(), { from: address, gasPrice, gas: 200000 }
+      );
+      console.log("receiveTokens txHash: ", tx);
+      console.log("receiveTokens logs: ", logs);
+      // await bridgeContract.send({from: address, gasPrice, gas: 200000});
+      if (receipt.status) {
+        console.log("receiveTokens receipt: ", receipt);
+      }
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   public async waitForReceipt(txHash) {
@@ -205,18 +203,24 @@ export default class MetaWallet extends React.Component<
     let timeElapsed = 0;
     const interval = 10000;
     return new Promise((resolve, reject) => {
-        const checkInterval = setInterval(async () => {
-            timeElapsed += interval;
-            const receipt: any = await web3.eth.getTransactionReceipt(txHash);
-            if(receipt != null) {
-                clearInterval(checkInterval);
-                resolve(receipt);
-            }
-            if(timeElapsed > 90000) {
-                reject(new Error(`Operation took too long
-                <a target="_blank" href="${config.explorer}/tx/${txHash}">check Tx on the explorer</a>`));
-            }
-        }, interval);
+      const cb = (err, receipt) => {
+        if (err) {
+          console.error("waitForReceipt error: ", err);
+          return;
+        }
+        if (receipt != null) {
+            clearInterval(checkInterval);
+            resolve(receipt);
+        }
+        if (timeElapsed > 90000) {
+            reject(new Error(`Operation took too long
+            <a target="_blank" href="${config.explorer}/tx/${txHash}">check Tx on the explorer</a>`));
+        }
+      };
+      const checkInterval = setInterval(async () => {
+          timeElapsed += interval;
+          web3.eth.getTransactionReceipt(txHash, cb);
+      }, interval);
     });
   }
 

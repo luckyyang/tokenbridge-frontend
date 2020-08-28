@@ -1,8 +1,10 @@
-import BN = require("bn.js");
+// import BN = require("bn.js");
 import * as React from "react";
 import * as TruffleContract from "truffle-contract";
 // import * as Web3 from "web3";
 import Web3 = require('web3');
+// import BigNumber from "bignumber.js"
+const BigNumber = require('bignumber.js');
 import { ContractsInfo, DAI_TOKEN } from '../util/constants';
 import retry3Times from '../util/retry';
 
@@ -31,7 +33,9 @@ interface IMetaWalletState {
   account: string;
   accountError: boolean;
   balance: string;
-  contractAddress: string;
+  tokenContractAddress: string;
+  bridgeContractAddress: string;
+  dai: number;
 }
 
 export default class MetaWallet extends React.Component<
@@ -44,7 +48,9 @@ export default class MetaWallet extends React.Component<
       account: "",
       accountError: false,
       balance: "",
-      contractAddress: "",
+      tokenContractAddress: "",
+      bridgeContractAddress: "",
+      dai: 0,
     };
   }
 
@@ -86,34 +92,18 @@ export default class MetaWallet extends React.Component<
     } catch (error) {
       console.log("error when get balance: ", error);
     }
-    try {
-      console.log("tokenContract.address: ", tokenContract.address);
 
-      const withdraw = new BN(web3.fromWei(10 ** 18, "ether"));
-      console.log("withdraw: ", withdraw.toString());
-      const result = await tokenContract.approve(bridgeContract.address, withdraw.toString(), { from: account });
-      // await tokenContract.send({from: account, gas:70000}, async (err, txHash) => {
-      //   try {
-      //       let receipt = await waitForReceipt(txHash);
-
-      //   } catch(err) {
-      //       console.log('Execution failed: ', err);
-      //   }
-      // });
-      console.log("result: ", result);
-    } catch (error) {
-      console.log("error happened: ", error);
-    }
     this.setState({
       // account: web3.eth.accounts[0],
       account,
       accountError: false,
       balance: balance.toString(),
-      contractAddress: tokenContract.address,
+      tokenContractAddress: tokenContract.address,
+      bridgeContractAddress: bridgeContract.address,
     });
   }
 
-  async crossToken() {
+  public crossToken = async () => {
     // stepIcon('validate-balance','');
     // stepIcon('approve-transfer','');
     // stepIcon('transfer-tokens','');
@@ -130,29 +120,32 @@ export default class MetaWallet extends React.Component<
     const bridgeContract = await BridgeContract.at(ContractsInfo[42].bridge);
 
     const tokenAddress = tokenContract.address;
-    console.log('tokenAddress: ', tokenAddress);
-    // TODO
-    const amount = new BN(10 ** 16);
-    if (!amount) {
+    console.log("tokenAddress: ", tokenAddress);
+    const { dai } = this.state;
+    if (!dai) {
         crossTokenError("Complete the Amount field");
         return;
     }
+    // TODO
+    const amount = new BigNumber(dai);
 
-    const decimals = tokenContract.decimals;
+    const decimals = await tokenContract.decimals();
+    console.log("decimals: ", decimals);
     const fee = 0;
-    const totalCost = fee === 0 ? amount.shiftedBy(decimals) : amount.shiftedBy(decimals).dividedBy(1 - fee);
-    const amountBN = totalCost.integerValue();
+    const totalCost = fee === 0 ? amount.shift(decimals) : amount.shift(decimals).dividedBy(1 - fee);
+    // const amountBN = totalCost.integerValue();
+    const amountBN = totalCost;
 
     let gasPrice = "";
     //let currentStep = 'validate-balance';
-    return retry3Times(tokenContract.balanceOf(address).call)
+    return tokenContract.balanceOf(address)
     .then(async (balance) => {
-      const balanceBN = new BN(balance);
+      const balanceBN = new BigNumber(balance);
       if (balanceBN.isLessThan(amountBN)) {
-        throw new Error(`Insuficient Balance in your account, your current balance is ${balanceBN.shiftedBy(-decimals)} ${tokenContract.symbol}`);
+        throw new Error(`Insuficient Balance in your account, your current balance is ${balanceBN.shift(-decimals)} ${tokenContract.symbol}`);
       }
       const maxWithdrawInWei = await retry3Times(bridgeContract.calcMaxWithdraw().call);
-      const maxWithdraw = new BN(web3.fromWei(maxWithdrawInWei, "ether"));
+      const maxWithdraw = new BigNumber(web3.fromWei(maxWithdrawInWei, "ether"));
       if (amount.isGreaterThan(maxWithdraw)) {
         throw new Error(`Amount bigger than the daily limit. Daily limit left ${maxWithdraw} tokens`);
       }
@@ -175,7 +168,7 @@ export default class MetaWallet extends React.Component<
     }).then(async () => {
       // currentStep = 'approve-transfer';
       return new Promise((resolve, reject) => {
-        tokenContract.approve(bridgeContract.options.address, amountBN.toString()).send({from: address, gasPrice, gas: 70000}, async (err, txHash) => {
+        tokenContract.approve(bridgeContract.address, amountBN.toString()).send({from: address, gasPrice, gas: 70000}, async (err, txHash) => {
           if (err) { return reject(err); }
           try {
             const receipt: any = await this.waitForReceipt(txHash);
@@ -191,7 +184,7 @@ export default class MetaWallet extends React.Component<
     }).then(async () => {
       // currentStep = 'transfer-tokens';
       return new Promise((resolve, reject) => {
-        bridgeContract.receiveTokens(tokenContract.options.address, amountBN.toString()).send({from: address, gasPrice, gas: 200000}, async (err, txHash) => {
+        bridgeContract.receiveTokens(tokenContract.address, amountBN.toString()).send({from: address, gasPrice, gas: 200000}, async (err, txHash) => {
           if (err) { return reject(err); }
           try {
             const receipt: any = await this.waitForReceipt(txHash);
@@ -233,17 +226,29 @@ export default class MetaWallet extends React.Component<
     });
   }
 
+  public onDaiChange = (event) => {
+    const dai = parseInt(event.target.value, 10);
+    console.log('dai: ', dai, typeof dai);
+    this.setState({ dai });
+    const withdraw = new BigNumber(dai);
+    console.log("withdraw: ", withdraw.toString());
+  }
+
 
   public render() {
     return (
       <div>
         <h3>MainToken</h3>
-        <p>Contract address: {this.state.contractAddress}</p>
+        <p>Test DAI contract address: {this.state.tokenContractAddress}</p>
+        <p>Bridge contract address: {this.state.bridgeContractAddress}</p>
         <p>
           Account:{" "}
           {this.state.accountError ? "No accounts found" : this.state.account}
         </p>
-        <p>balance: {this.state.balance}</p>
+        <p>DAI balance: {this.state.balance}</p>
+        <div>Transfer DAI to CKB</div>
+        <div><input onChange={this.onDaiChange} type="number" /></div>
+        <div><button onClick={this.crossToken}>Start to Cross</button></div>
       </div>
     );
   }

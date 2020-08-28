@@ -138,76 +138,65 @@ export default class MetaWallet extends React.Component<
 
     let gasPrice = "";
     // let currentStep = 'validate-balance';
-    return tokenContract.balanceOf(address)
-    .then(async (balance) => {
-      const balanceBN = new BigNumber(balance);
-      if (balanceBN.lessThan(amountBN)) {
-        throw new Error(`Insuficient Balance in your account,
-        your current balance is ${balanceBN.shift(-decimals)} ${tokenContract.symbol}`);
-      }
-      const maxWithdrawInWei = await bridgeContract.calcMaxWithdraw();
-      console.log("maxWithdrawInWei: ", maxWithdrawInWei);
-      const maxWithdraw = new BigNumber(web3.fromWei(maxWithdrawInWei, "ether"));
-      if (amount.greaterThan(maxWithdraw)) {
-        throw new Error(`Amount bigger than the daily limit. Daily limit left ${maxWithdraw} tokens`);
-      }
+    const balance = await tokenContract.balanceOf(address);
+    const balanceBN = new BigNumber(balance);
+    if (balanceBN.lessThan(amountBN)) {
+      throw new Error(`Insuficient Balance in your account,
+      your current balance is ${balanceBN.shift(-decimals)} ${tokenContract.symbol}`);
+    }
+    const maxWithdrawInWei = await bridgeContract.calcMaxWithdraw();
+    console.log("maxWithdrawInWei: ", maxWithdrawInWei);
+    const maxWithdraw = new BigNumber(web3.fromWei(maxWithdrawInWei, "ether"));
+    if (amount.greaterThan(maxWithdraw)) {
+      throw new Error(`Amount bigger than the daily limit. Daily limit left ${maxWithdraw} tokens`);
+    }
 
-      let gasPriceParsed = 0;
-      if (config.networkId >= 30 && config.networkId <= 33) {
-        const block: any = await web3.eth.getBlock("latest");
-        gasPriceParsed = parseInt(block.minimumGasPrice, 10);
-        gasPriceParsed = gasPriceParsed <= 1 ? 1 : gasPriceParsed * 1.03;
-      } else {
-        const callback = (err, gasPriceAvg) => {
-          if (!err) {
-            gasPriceParsed = parseInt(gasPriceAvg, 10);
-            gasPriceParsed = gasPriceParsed <= 1 ? 1 : gasPriceParsed * 1.3;
-          }
+    let gasPriceParsed = 0;
+    if (config.networkId >= 30 && config.networkId <= 33) {
+      const block: any = await web3.eth.getBlock("latest");
+      gasPriceParsed = parseInt(block.minimumGasPrice, 10);
+      gasPriceParsed = gasPriceParsed <= 1 ? 1 : gasPriceParsed * 1.03;
+    } else {
+      const callback = (err, gasPriceAvg) => {
+        if (!err) {
+          gasPriceParsed = parseInt(gasPriceAvg, 10);
+          gasPriceParsed = gasPriceParsed <= 1 ? 1 : gasPriceParsed * 1.3;
         }
-        web3.eth.getGasPrice(callback);
       }
-      gasPrice = `0x${Math.ceil(gasPriceParsed).toString(16)}`;
-    }).then(async () => {
-      // currentStep = 'approve-transfer';
-      return new Promise((resolve, reject) => {
-        tokenContract.approve(bridgeContract.address, amountBN.toString())
-        .send({from: address, gasPrice, gas: 70000}, async (err, txHash) => {
-          if (err) { return reject(err); }
-          try {
-            const receipt: any = await this.waitForReceipt(txHash);
-            if (receipt.status) {
-              resolve(receipt);
-            }
-          } catch (err) {
-            reject(err);
+      web3.eth.getGasPrice(callback);
+    }
+    gasPrice = `0x${Math.ceil(gasPriceParsed).toString(16)}`;
+
+    // currentStep = 'approve-transfer';
+    await tokenContract.approve(bridgeContract.address, amountBN.toString());
+    tokenContract.send({from: address, gasPrice, gas: 70000}, async (err, txHash) => {
+      if (err) { return console.error(err); }
+      try {
+        const receipt: any = await this.waitForReceipt(txHash);
+        if (receipt.status) {
+          console.log("receipt: ", receipt);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      console.error(new Error(`Execution failed <a target="_blank" href="${config.explorer}/tx/${txHash}">see Tx</a>`));
+    });
+
+    // currentStep = 'transfer-tokens';
+    return new Promise((resolve, reject) => {
+      bridgeContract.receiveTokens(tokenContract.address, amountBN.toString())
+      .send({from: address, gasPrice, gas: 200000}, async (err, txHash) => {
+        if (err) { return reject(err); }
+        try {
+          const receipt: any = await this.waitForReceipt(txHash);
+          if (receipt.status) {
+            resolve(receipt);
           }
-          reject(new Error(`Execution failed <a target="_blank" href="${config.explorer}/tx/${txHash}">see Tx</a>`));
-        });
+        } catch (err) {
+          reject(err);
+        }
+        reject(new Error(`Execution failed <a target="_blank" href="${config.explorer}/tx/${txHash}">see Tx</a>`));
       });
-    }).then(async () => {
-      // currentStep = 'transfer-tokens';
-      return new Promise((resolve, reject) => {
-        bridgeContract.receiveTokens(tokenContract.address, amountBN.toString())
-        .send({from: address, gasPrice, gas: 200000}, async (err, txHash) => {
-          if (err) { return reject(err); }
-          try {
-            const receipt: any = await this.waitForReceipt(txHash);
-            if (receipt.status) {
-              resolve(receipt);
-            }
-          } catch (err) {
-            reject(err);
-          }
-          reject(new Error(`Execution failed <a target="_blank" href="${config.explorer}/tx/${txHash}">see Tx</a>`));
-        });
-      });
-    }).then(async (receipt) => {
-      // currentStep = 'wait-confirmations';
-      console.log("receipt: ", receipt);
-    }).catch((err) => {
-      // iconFail(currentStep);
-      console.error(err);
-      crossTokenError(`Couln't cross the tokens. ${err.message}`);
     });
   }
 

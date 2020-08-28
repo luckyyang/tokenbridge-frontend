@@ -33,7 +33,8 @@ export const ContractsInfo = {
     allowTokens: "0x5D1fE6BD8C57bEA32903079759e89900A462Ddc2",
   },
   42: {
-    testToken: "0x92e1b359bec60b966ce93295ed36fee10723990b",
+    // testToken: "0x92e1b359bec60b966ce93295ed36fee10723990b",
+    testToken: "0x41c16473b12211892c813f52815f700440471aa0",
     bridge: "0xf93d1b911c8f1f8ef445f0ec044cdb71bae36fba",
     federation: "0xe97dcd3d80778985447c09ff6be23fe2d2b3486a",
     multiSig: "0xc2087daf3f41afc1279f64b34ab0a091db32d40c",

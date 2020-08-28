@@ -141,14 +141,14 @@ export default class MetaWallet extends React.Component<
     return tokenContract.balanceOf(address)
     .then(async (balance) => {
       const balanceBN = new BigNumber(balance);
-      if (balanceBN.isLessThan(amountBN)) {
+      if (balanceBN.lessThan(amountBN)) {
         throw new Error(`Insuficient Balance in your account,
         your current balance is ${balanceBN.shift(-decimals)} ${tokenContract.symbol}`);
       }
       const maxWithdrawInWei = await bridgeContract.calcMaxWithdraw();
       console.log("maxWithdrawInWei: ", maxWithdrawInWei);
       const maxWithdraw = new BigNumber(web3.fromWei(maxWithdrawInWei, "ether"));
-      if (amount.isGreaterThan(maxWithdraw)) {
+      if (amount.greaterThan(maxWithdraw)) {
         throw new Error(`Amount bigger than the daily limit. Daily limit left ${maxWithdraw} tokens`);
       }
 

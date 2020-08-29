@@ -4,6 +4,7 @@
     "tslint-react"
   ],
   "rules": {
+    "quotemark": [true, "single", "jsx-double"],
     "indent": [
       true,
       "spaces",

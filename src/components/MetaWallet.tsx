@@ -7,6 +7,7 @@ import Web3 = require('web3');
 const BigNumber = require('bignumber.js');
 import { ContractsInfo, DAI_TOKEN } from '../util/constants';
 // import retry3Times from '../util/retry';
+const DaiUdtTypeHash = '0x7abd58773ffee5866ffd30cd287e88f8139dd0cad5deb9e189c68b4b26bf9899';
 
 const config = {
   networkId: 42,
@@ -32,10 +33,11 @@ interface IMetaWalletProps {
 interface IMetaWalletState {
   account: string;
   accountError: boolean;
-  balance: string;
+  balance: number;
   tokenContractAddress: string;
   bridgeContractAddress: string;
   dai: number;
+  ckbDai: number;
 }
 
 export default class MetaWallet extends React.Component<
@@ -47,10 +49,11 @@ export default class MetaWallet extends React.Component<
     this.state = {
       account: "",
       accountError: false,
-      balance: "",
+      balance: 0,
       tokenContractAddress: "",
       bridgeContractAddress: "",
       dai: 0,
+      ckbDai: 0,
     };
   }
 
@@ -86,8 +89,10 @@ export default class MetaWallet extends React.Component<
 
     // const balance  = await tokenContract.getBalance(web3.eth.accounts[0]);
     let balance;
+    let ckbDai;
     try {
       balance = await tokenContract.balanceOf(account);
+      ckbDai = await this.getCkbDai();
       console.log("balance: ", balance);
     } catch (error) {
       console.log("error when get balance: ", error);
@@ -97,10 +102,18 @@ export default class MetaWallet extends React.Component<
       // account: web3.eth.accounts[0],
       account,
       accountError: false,
-      balance: balance.toString(),
+      balance: balance / 10 ** 18,
+      ckbDai,
       tokenContractAddress: tokenContract.address,
       bridgeContractAddress: bridgeContract.address,
     });
+  }
+
+  public getCkbDai = async () => {
+    const { data } = await (window as any).ckb.getUDTs();
+    console.log('udtsObj: ', data);
+    const result = (data[DaiUdtTypeHash].udt) / 10 ** 8;
+    return result;
   }
 
   public crossToken = async () => {
@@ -242,7 +255,8 @@ export default class MetaWallet extends React.Component<
           Account:{" "}
           {this.state.accountError ? "No accounts found" : this.state.account}
         </p>
-        <p>DAI balance: {this.state.balance}</p>
+        <p>ETH DAI balance: {this.state.balance}</p>
+        <p>CKB DAI balance: {this.state.ckbDai}</p>
         <div>Transfer DAI to CKB</div>
         <div><input onChange={this.onDaiChange} type="number" /></div>
         <div><button onClick={this.crossToken}>Start to Cross</button></div>

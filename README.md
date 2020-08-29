@@ -1,4 +1,4 @@
-Truffle React TypeScript Template
+CKB <-> ETH Token Bridge Frontend
 ---
 
 ![box-img-sm](https://github.com/LibertyLocked/truffle-react-ts-template/blob/master/box-img-sm.png?raw=true)

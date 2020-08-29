@@ -1,17 +1,22 @@
+html, body {
+  height: 100%;
+}
+
 .app {
-  text-align: center;
+  /* text-align: center; */
 }
 
 .appLogo {
   animation: appLogoSpin infinite 20s linear;
-  height: 50px;
+  height: 100px;
 }
 
 .appHeader {
   background-color: #222;
-  height: 90px;
+  height: 200px;
   padding: 20px;
   color: white;
+  text-align: center;
 }
 
 .appIntro {

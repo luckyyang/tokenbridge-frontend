@@ -1,0 +1,37 @@
+.container {
+  width: 750px;
+  margin: auto;
+  padding-top: 30px;
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.grid {
+  text-align: center;
+}
+
+.planeContainer {
+  align-self: flex-end;
+  transform: rotateY(0deg);
+}
+
+.planeContainerReversed {
+  align-self: flex-end;
+  transform: rotateY(180deg);
+}
+
+.balance {
+  font-size: 24px;
+  margin-bottom: 15px;
+}
+
+.btn {
+  margin-top: 10px;
+  height: 32px;
+  padding: 8px 20px;
+}
+
+.input {
+  margin: 10px auto;
+  height: 24px;
+}

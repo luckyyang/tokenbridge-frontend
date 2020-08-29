@@ -5,6 +5,8 @@ import * as TruffleContract from "truffle-contract";
 import Web3 = require('web3');
 // import BigNumber from "bignumber.js"
 const BigNumber = require('bignumber.js');
+const styles = require("./style.css");
+const plane = require("../plane.png");
 import { ContractsInfo, DAI_TOKEN } from '../util/constants';
 // import retry3Times from '../util/retry';
 const DaiUdtTypeHash = '0x7abd58773ffee5866ffd30cd287e88f8139dd0cad5deb9e189c68b4b26bf9899';
@@ -33,11 +35,13 @@ interface IMetaWalletProps {
 interface IMetaWalletState {
   account: string;
   accountError: boolean;
-  balance: number;
   tokenContractAddress: string;
   bridgeContractAddress: string;
+  balance: number;
   dai: number;
+  ckbDaiToTransfer: number;
   ckbDai: number;
+  isInputingCKB: boolean;
 }
 
 export default class MetaWallet extends React.Component<
@@ -49,11 +53,13 @@ export default class MetaWallet extends React.Component<
     this.state = {
       account: "",
       accountError: false,
-      balance: 0,
       tokenContractAddress: "",
       bridgeContractAddress: "",
+      balance: 0,
       dai: 0,
       ckbDai: 0,
+      ckbDaiToTransfer: 0,
+      isInputingCKB: false,
     };
   }
 
@@ -116,7 +122,7 @@ export default class MetaWallet extends React.Component<
     return result;
   }
 
-  public crossToken = async () => {
+  public crossTokenToCkb = async () => {
     // stepIcon('validate-balance','');
     // stepIcon('approve-transfer','');
     // stepIcon('transfer-tokens','');
@@ -237,29 +243,41 @@ export default class MetaWallet extends React.Component<
     });
   }
 
-  public onDaiChange = (event) => {
+  public crossTokenToEth = () => {
+    (window as any).ckb.burnUDT(this.state.ckbDaiToTransfer);
+  }
+
+  public onEthDaiChange = (event) => {
     const dai = parseInt(event.target.value, 10);
-    console.log("dai: ", dai, typeof dai);
-    this.setState({ dai });
-    const withdraw = new BigNumber(dai);
-    console.log("withdraw: ", withdraw.toString());
+    console.log("dai to transfer: ", dai, typeof dai);
+    this.setState({ dai, isInputingCKB: false });
+  }
+
+  public onCkbDaiChange = (event) => {
+    const ckbDaiToTransfer = parseInt(event.target.value, 10);
+    console.log("ckbDaiToTransfer: ", ckbDaiToTransfer, typeof ckbDaiToTransfer);
+    this.setState({ ckbDaiToTransfer, isInputingCKB: true });
   }
 
   public render() {
+    const planeClass = this.state.isInputingCKB ? styles.planeContainerReversed : styles.planeContainer;
     return (
-      <div>
-        <h3>MainToken</h3>
-        <p>Test DAI contract address: {this.state.tokenContractAddress}</p>
-        <p>Bridge contract address: {this.state.bridgeContractAddress}</p>
-        <p>
-          Account:{" "}
-          {this.state.accountError ? "No accounts found" : this.state.account}
-        </p>
-        <p>ETH DAI balance: {this.state.balance}</p>
-        <p>CKB DAI balance: {this.state.ckbDai}</p>
-        <div>Transfer DAI to CKB</div>
-        <div><input onChange={this.onDaiChange} type="number" /></div>
-        <div><button onClick={this.crossToken}>Start to Cross</button></div>
+      <div className={styles.container}>
+        <div className={styles.grid}>
+          <h3>ETH DAI</h3>
+          <div className={styles.balance}>{this.state.balance}</div>
+          <div><input className={styles.input} onChange={this.onEthDaiChange} type="number" /></div>
+          <div><button className={styles.btn} onClick={this.crossTokenToCkb}>Start to Cross</button></div>
+        </div>
+        <div className={planeClass}>
+          <img src={plane} className={styles.plane} alt="transfer arrow" />
+        </div>
+        <div className={styles.grid}>
+          <h3>CKB DAI</h3>
+          <div className={styles.balance}>{this.state.ckbDai}</div>
+          <div><input className={styles.input} onChange={this.onCkbDaiChange} type="number" /></div>
+          <div><button className={styles.btn} onClick={this.crossTokenToEth}>Start to Cross</button></div>
+        </div>
       </div>
     );
   }
